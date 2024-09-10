@@ -5,6 +5,7 @@ class MyTelegramBot extends HtmlTelegramBot {
     constructor(token) {
         super(token);
         this.mode = null;
+        this.list = []
     }
     async start(msg){
         this.mode = "main"
@@ -37,13 +38,70 @@ class MyTelegramBot extends HtmlTelegramBot {
     }
     async gptDialog(msg){
         const text = msg.text;
+        const mess = await this.sendText("User typing...")
         const ans = await chatgpt.sendQuestion("Ответь на вопрос", text)
-        await this.sendText(ans)
+        await this.editText(mess, ans)
+    }
+
+    async date(msg){
+        this.mode = "date"
+        const text = this.loadMessage("date")
+        await this.sendImage("date")
+        await this.sendTextButtons(text, {
+            "date_grande":"Арианда",
+            "date_robbie":"Робби",
+            "date_zendaya":"Зендея",
+            "date_gosling":"РАян Гослинг",
+            "date_hardy":"Том Харди"
+        })
+    }
+    async dateButton(callBackQuery){
+        const query = callBackQuery.data;
+        await this.sendImage(query)
+        await this.sendText("Nice choise")
+        const prompt = this.loadPrompt(query)
+        chatgpt.setPrompt(prompt);
+    }
+
+    async dateDialog(msg){
+        const text = msg.text;
+        const mess = await this.sendText("User typing...")
+        const ans = await chatgpt.addMessage(text)
+        await this.editText(mess, ans)
+        //await this.sendText(ans)
+    }
+    async message(msg){
+        this.mode = "message"
+        const text = this.loadMessage("message")
+        await this.sendImage("message")
+        await this.sendTextButtons(text, {
+            "message_next":"Следущее сообщение",
+            "message_date":"Пригалсить на свидание"
+            }
+        )
+    }
+    async messageButton(callbackQuery){
+        const query = callbackQuery.data;
+        const prompt = this.loadPrompt(query)
+        const userChatHist = this.list.join("\n\n")
+        const mess = await this.sendText("User typing...")
+        const answer = await chatgpt.sendQuestion(prompt, userChatHist);
+        await this.editText(mess, answer);
+    }
+    async messageDialog(msg){
+        const text = msg.text;
+        this.list.push(text);
     }
 
     async hello(msg){
         if(this.mode === "gpt"){
             await this.gptDialog(msg);
+        }
+        else if(this.mode === "date"){
+            await this.dateDialog(msg);
+        }
+        else if(this.mode === "message"){
+            await this.messageDialog(msg);
         }
         else {
             const text = msg.text;
@@ -59,6 +117,8 @@ class MyTelegramBot extends HtmlTelegramBot {
                 })
         }
     }
+
+
     async helloButton(callBackQuery){
         const query = callBackQuery.data;
         if(query === "theme_light")
@@ -74,5 +134,10 @@ const bot = new MyTelegramBot("7256586247:AAE8FxZcL27LQyf8N6sbyqJDdHPhGsA6nI4");
 bot.onCommand(/\/start/, bot.start)
 bot.onCommand(/\/html/, bot.html)
 bot.onCommand(/\/gpt/, bot.gpt)
+bot.onCommand(/\/date/, bot.date)
+bot.onCommand(/\/message/, bot.message)
+
 bot.onTextMessage(bot.hello)
+bot.onButtonCallback(/^date_.*/, bot.dateButton)
+bot.onButtonCallback(/^message_.*/, bot.messageButton)
 bot.onButtonCallback(/^.*/,bot.helloButton)
