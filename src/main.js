@@ -6,6 +6,7 @@ class MyTelegramBot extends HtmlTelegramBot {
         super(token);
         this.mode = null;
         this.list = []
+        this.user = {};
     }
     async start(msg){
         this.mode = "main"
@@ -79,6 +80,7 @@ class MyTelegramBot extends HtmlTelegramBot {
             "message_date":"Пригалсить на свидание"
             }
         )
+        this.list = []
     }
     async messageButton(callbackQuery){
         const query = callbackQuery.data;
@@ -91,9 +93,92 @@ class MyTelegramBot extends HtmlTelegramBot {
     async messageDialog(msg){
         const text = msg.text;
         this.list.push(text);
+
+    }
+    async profile(){
+        this.mode = "profile"
+        const text = this.loadMessage("profile")
+        await this.sendImage("profile")
+        await this.sendText(text)
+        this.user = {}
+        this.count = 0;
+        await this.sendText("How old are you?")
+    }
+
+
+    async profileDialog(msg){
+        const text = msg.text
+        this.count++;
+
+        if(this.count === 1){
+            this.user["age"] = text;
+            await this.sendText("What is your work")
+        }
+        if(this.count === 2){
+            this.user["work"] = text;
+            await this.sendText("What is your hobie")
+        }
+        if(this.count === 3){
+            this.user["occupation"] = text;
+            await this.sendText("What is you dont like in people")
+        }
+        if(this.count === 4){
+            this.user["annoys"] = text;
+            await this.sendText("What are you want here")
+        }
+        if(this.count === 5){
+            this.user["goals"] = text;
+            const prompt = this.loadPrompt("profile")
+            const info = userInfoToString(this.user);
+            const ans = await chatgpt.sendQuestion(prompt, info);
+            await this.sendText(ans)
+        }
+
+
+    }
+
+    async opener(msg){
+        this.mode = "opener"
+        const text = this.loadMessage("opener")
+        await this.sendImage("opener")
+        await this.sendText(text)
+        this.user = {}
+        this.count = 0;
+        await this.sendText("What is your partner name?")
+    }
+
+    async openerDialog(msg){
+
+        const text = msg.text
+        this.count++;
+
+        if(this.count === 1){
+            this.user["name"] = text;
+            await this.sendText("How is it old")
+        }
+        if(this.count === 2){
+            this.user["age"] = text;
+            await this.sendText("Is it pretty ? 1-10")
+        }
+        if(this.count === 3){
+            this.user["handsome"] = text;
+            await this.sendText("What is it work?")
+        }
+        if(this.count === 4){
+            this.user["occupation"] = text;
+            await this.sendText("What are your goal?")
+        }
+        if(this.count === 5){
+            this.user["goals"] = text;
+            const prompt = this.loadPrompt("opener")
+            const info = userInfoToString(this.user);
+            const ans = await chatgpt.sendQuestion(prompt, info);
+            await this.sendText(ans)
+        }
     }
 
     async hello(msg){
+
         if(this.mode === "gpt"){
             await this.gptDialog(msg);
         }
@@ -102,6 +187,12 @@ class MyTelegramBot extends HtmlTelegramBot {
         }
         else if(this.mode === "message"){
             await this.messageDialog(msg);
+        }
+        else if(this.mode === "profile"){
+            await this.profileDialog(msg);
+        }
+        else if(this.mode === "opener"){
+            await this.openerDialog(msg);
         }
         else {
             const text = msg.text;
@@ -136,6 +227,8 @@ bot.onCommand(/\/html/, bot.html)
 bot.onCommand(/\/gpt/, bot.gpt)
 bot.onCommand(/\/date/, bot.date)
 bot.onCommand(/\/message/, bot.message)
+bot.onCommand(/\/profile/, bot.profile)
+bot.onCommand(/\/opener/, bot.opener)
 
 bot.onTextMessage(bot.hello)
 bot.onButtonCallback(/^date_.*/, bot.dateButton)
